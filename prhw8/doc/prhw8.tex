@@ -1,0 +1,704 @@
+\documentclass{article}
+
+% chinese fonts
+\usepackage{ctex}
+
+% math fonts
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{bm}
+
+% figures
+\usepackage{tikz}
+\usepackage{graphicx}
+\graphicspath{{./figures/}}
+
+% tables
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{multirow}
+
+% codes
+\usepackage{listings}
+\lstset{language     = Matlab,
+        basicstyle   = \ttfamily,
+        keywordstyle = \color{cyan},
+        rulecolor    = \color{black},
+        commentstyle = \color{green},
+        keepspaces   = true,
+        tabsize      = 4,
+}
+
+% hyperlinks
+\usepackage{hyperref}
+\hypersetup{
+  breaklinks,
+  colorlinks = true,
+  citecolor  = blue,
+  linkcolor  = red,
+  urlcolor   = magenta,
+}
+
+% algorithms
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+% bibliography
+\usepackage[sort&compress,numbers]{natbib}
+
+\include{macros}
+
+\setlength{\oddsidemargin}{-0.25 in}
+\setlength{\evensidemargin}{-0.25 in} 
+\setlength{\topmargin}{-0.25in} 
+\setlength{\textwidth}{7 in} 
+\setlength{\textheight}{8.5 in}
+\setlength{\headsep}{0.25 in} 
+\setlength{\parindent}{0 in}
+\setlength{\parskip}{0.1 in}
+
+\newcommand{\homework}[5]{
+  \pagestyle{myheadings} 
+  \thispagestyle{plain}
+  \newpage
+  \setcounter{page}{1} 
+  \setcounter{section}{#5} 
+  \noindent
+  \begin{center}
+    \framebox{ 
+      \vbox{
+        \vspace{2mm} 
+        \hbox to 6.28in { {\bf
+        THU-70250043-0,~Pattern~Recognition~(Spring 2021) \hfill Homework: 8} }
+        \vspace{6mm} 
+        \hbox to 6.28in { {\Large \hfill #1 \hfill} }
+        \vspace{6mm} 
+        \hbox to 6.28in { {\it Lecturer: #2 \hfill} }
+        \vspace{2mm} 
+        \hbox to 6.28in { {\it \hspace{14mm} #3 \hfill} }
+        \vspace{2mm} 
+        \hbox to 6.28in { {\it Student: #4 \hfill} }
+        \vspace{2mm} 
+      } 
+    }
+  \end{center}
+  \markboth{#1}{#1} 
+  \vspace*{4mm} 
+}
+
+\begin{document}
+
+\homework{Deep Learning 1}{Changshui Zhang
+\hspace{5mm} {\tt zcs@mail.tsinghua.edu.cn}}{Hong Zhao \hspace{16mm} {\tt vzhao@tsinghua.edu.cn}}{Jingxuan Yang \hspace{10mm} {\tt yangjx20@mails.tsinghua.edu.cn}}{8}
+
+
+\section*{Backward Propagation Algorithm}
+
+1. We have a $k$-class classification problem. The input $\vx$ is a $d$-dimensional vector, and the corresponding label $\vy$ is a one-hot $k$-dimensional vector with one element being 1 and others being 0. We define the following neural network $\hat{\vy}=f(\vx;\mw_1, \vb_1, \mw_2, \vb_2)$:
+\begin{align}
+  \vh_1 &= \mw_1^\top\vx + \vb_1,\quad \vh_1\in\mathbb R^s \\
+  \va_1 &= \mathrm{ReLU}(\vh_1),\quad \va_1\in\mathbb R^s \\
+  \vh_2 &= \mathrm{Concat}(\va_1, \vx),\quad \vh_2\in\mathbb R^{s+d} \\
+  \vm &\sim \mathrm{Bernoulli}(p),\quad \vm\in\mathbb R^{s+d}\\
+  \va_2 &= \vh_2\odot\vm,\quad \va_2\in\mathbb R^{s+d}\\
+  \vh_3 &= \mw_2^\top\va_2 + \vb_2,\quad \vh_3\in\mathbb R^k \\
+  \hat{\vy} &= \mathrm{Softmax}(\vh_3),\quad \hat{\vy}\in\mathbb R^k
+\end{align}
+where $\mathrm{ReLU}(\cdot)$ is element-wise ReLU activation function, $\mathrm{Concat}(\va, \vb)$ means concatenating vector $\vb$ after vector $\va$ to make a vector with larger dimensionality, $\vm$ is current dropout mask, $\odot$ means element-wise multiplication(Specifically, equation(5) randomly zeroes some of the elements of the input tensor $\vh_2$ with probability $p$ using $\vm$ sampled from a $\mathrm{Bernoulli}$ distribution. For example, if $\vh_2 = [a,b,c,d]^\top$, and $\vm = [e,f,g,h]^\top$, then $\va_2 = [ae,bf,cg,dh]^\top$ according to equation(5)), and $\mathrm{Softmax}(\cdot)$ is softmax activation function. The dimensionalities of parameters and internal variables could be inferred from the neural network definition.
+
+We use the following cross-entropy loss:
+\begin{equation}
+  L=-\vy^\top\log\hat{\vy}.
+  \label{eq:crossEntropy}
+\end{equation}
+
+1.1. Please use backward propagation algorithm to find the following derivatives:
+\begin{equation}
+  \frac{\partial L}{\partial \hat{\vy}},\quad\frac{\partial L}{\partial \vh_3},\quad\frac{\partial L}{\partial \mw_2},\quad\frac{\partial L}{\partial \vb_2},\quad\frac{\partial L}{\partial \va_2},\quad\frac{\partial L}{\partial \vh_2},\quad\frac{\partial L}{\partial \va_1},\quad\frac{\partial L}{\partial \vh_1},\quad\frac{\partial L}{\partial \mw_1},\quad\frac{\partial L}{\partial \vb_1},\quad\frac{\partial L}{\partial \vx}.
+\end{equation}
+
+Please express your results in matrices and vectors instead of sum of individual elements.
+
+解: 原题目中 $\vw_1,\vw_2$ 实为矩阵, 故改用 $\mw_1,\mw_2$ 符号代替之. 为避免符号下标混淆, 本题中一律以右上角小括号内指标表示向量, 矩阵和张量的元素, 如 $\va^{(1)}$ 表示向量 $\va$ 的第 1 个元素, $\ma^{(2,3)}$ 表示矩阵 $\ma$ 的第 2 行第 3 列的元素, $\ta^{(1,2,3)}$ 表示张量 $\ta$ 的第 1 行第 2 列第 3 竖的元素.
+
+交叉熵损失函数 $L$ 对 $\vyh$ 的偏导数为
+\begin{equation}
+  \begin{aligned}
+    \frac{\partial L}{\partial \hat{\vy}}
+    =\frac{\partial\big(-\vy^\top\log\hat{\vy}\big)}{\partial \hat{\vy}}
+    =-\frac{\partial\log\vyh}{\partial\vyh}\vy
+    =-\diag\left(\bm{1}\oslash\vyh\right)\vy
+    =-\vy\oslash\vyh
+  \end{aligned}
+\end{equation}
+% \begin{equation}
+%   \begin{aligned}
+%     \frac{\partial L}{\partial \hat{\vy}}
+%     =\frac{\partial\big[-(\log\hat{\vy})^\top\vy\big]}{\partial \hat{\vy}}
+%     =-\frac{\partial}{\partial \hat{\vy}}\sum_{i=1}^k\vy^{(i)}\log\vyh^{(i)}
+%     =-\begin{bmatrix}
+%       \displaystyle\frac{\partial}{\partial \hat{y}_1}\sum_{i=1}^k\vy^{(i)}\log\vyh^{(i)}\\
+%       \displaystyle\frac{\partial}{\partial \hat{y}_2}\sum_{i=1}^k\vy^{(i)}\log\vyh^{(i)}\\
+%       \vdots\\
+%       \displaystyle\frac{\partial}{\partial \hat{y}_k}\sum_{i=1}^k\vy^{(i)}\log\vyh^{(i)}\\
+%     \end{bmatrix}
+%     =-\begin{bmatrix}
+%       \displaystyle\frac{\vy^{(1)}}{\vyh^{(1)}}\\[3mm]
+%       \displaystyle\frac{\vy^{(2)}}{\vyh^{(2)}}\\
+%       \vdots\\
+%       \displaystyle\frac{\vy^{(k)}}{\vyh^{(k)}}\\
+%     \end{bmatrix}
+%     =-\vy\oslash\vyh
+%   \end{aligned}
+% \end{equation}
+其中, 符号 $\oslash$ 表示逐项除法 (element-wise division).
+
+函数 $\vyh$ 对 $\vh_3$ 的偏导数为
+\begin{equation}
+  \frac{\partial \vyh}{\partial\vh_3}
+  =\frac{\partial}{\partial\vh_3}\left(\frac{\exp(\vh_3)}{\bm{1}^\top\exp(\vh_3)}\right)
+\end{equation}
+其中, $\forall~i,j=1,2,\dots,k$, 当 $i\neq j$ 时, 有
+\begin{equation}
+  \begin{aligned}
+    \frac{\partial \vyh^{(i)}}{\partial\vh_3^{(j)}}
+    &=\frac{\partial}{\partial\vh_3^{(j)}}\left(\frac{\exp(\vh_3^{(i)})}{\bm{1}^\top\exp(\vh_3)}\right)\\
+    &=\frac{0-\exp(\vh_3^{(i)})\exp(\vh_3^{(j)})}{[\bm{1}^\top\exp(\vh_3)]^2}\\
+    &=-\frac{\exp(\vh_3^{(i)})}{\bm{1}^\top\exp(\vh_3)}\frac{\exp(\vh_3^{(j)})}{\bm{1}^\top\exp(\vh_3)}\\
+    &=-\vyh^{(i)}\vyh^{(j)}
+  \end{aligned}
+\end{equation}
+
+当 $i=j$ 时, 有
+\begin{equation}
+  \begin{aligned}
+    \frac{\partial \vyh^{(j)}}{\partial\vh_3^{(j)}}
+    &=\frac{\partial}{\partial\vh_3^{(j)}}\left(\frac{\exp(\vh_3^{(j)})}{\bm{1}^\top\exp(\vh_3)}\right)\\
+    &=\frac{\exp(\vh_3^{(j)})\bm{1}^\top\exp(\vh_3)-\exp(\vh_3^{(j)})\exp(\vh_3^{(j)})}{[\bm{1}^\top\exp(\vh_3)]^2}\\
+    &=-\frac{\exp(\vh_3^{(j)})}{\bm{1}^\top\exp(\vh_3)}\frac{\exp(\vh_3^{(j)})}{\bm{1}^\top\exp(\vh_3)}+\frac{\exp(\vh_3^{(j)})}{\bm{1}^\top\exp(\vh_3)}\\
+    &=-\vyh^{(j)}\vyh^{(j)}+\vyh^{(j)}
+  \end{aligned}
+\end{equation}
+
+综上, $\vyh$ 对 $\vh_3$ 的偏导数为
+\begin{equation}
+  \begin{aligned}
+    \frac{\partial \vyh}{\partial\vh_3}
+    &=\frac{\partial}{\partial\vh_3}\left(\frac{\exp(\vh_3)}{\bm{1}^\top\exp(\vh_3)}\right)\\
+    &=-\vyh\vyh^\top+\diag(\vyh)\\
+  \end{aligned}
+\end{equation}
+
+注意到 $\vy$ 是 one-hot 向量, 则交叉熵损失函数 $L$ 对 $\vh_3$ 的偏导数为
+\begin{equation}
+  \begin{aligned}
+    \frac{\partial L}{\partial \vh_3}
+    &=\frac{\partial \vyh}{\partial\vh_3}\frac{\partial L}{\partial \hat{\vy}}\\
+    &=[-\vyh\vyh^\top+\diag(\vyh)](-\vy\oslash\vyh)\\
+    &=\vyh\vyh^\top(\vy\oslash\vyh)-\diag(\vyh)(\vy\oslash\vyh)\\
+    &=\vyh\sum_{i=1}^k\vy^{(i)}-\vy\\
+    &=\vyh-\vy\\
+  \end{aligned}
+\end{equation}
+
+函数 $\vh_3$ 对 $\mw_2$ 的偏导数为 3 阶张量 $\tw\in\reals^{(s+d)\times k\times k}$, 其元素为
+\begin{equation}
+  \tw^{(m,n,i)}=\frac{\partial \vh_3^{(i)}}{\partial \mw_2^{(m,n)}}=\frac{\partial \Big[(\mw_2^\top)^{(i,:)}\va_2+\vb_2^{(i)}\Big]}{\partial \mw_2^{(m,n)}}=\delta_{in}\va_2^{(m)},\quad\forall~i,n=1,2,\dots,k,~m=1,2,\dots,s+d
+\end{equation}
+其中, $\delta_{in}$ 为 Kronecker delta 符号.
+
+故交叉熵损失函数 $L$ 对 $\mw_2^{(m,n)}$ 的偏导数为
+\begin{equation}
+  \begin{aligned}
+    \frac{\partial L}{\partial\mw_2^{(m,n)}}
+    &=\sum_{i=1}^k\frac{\partial\vh_3^{(i)}}{\partial\mw_2^{(m,n)}}\frac{\partial L}{\partial\vh_3^{(i)}}\\
+    &=\sum_{i=1}^k \delta_{in}\va_2^{(m)} \Big[\vyh^{(i)}-\vy^{(i)}\Big]\\
+    &=\va_2^{(m)} \Big[\vyh^{(n)}-\vy^{(n)}\Big]\\
+  \end{aligned}
+\end{equation}
+
+所以, 交叉熵损失函数 $L$ 对 $\mw_2$ 的偏导数为
+\begin{equation}
+  \frac{\partial L}{\partial \mw_2}=\va_2(\vyh-\vy)^\top
+  \label{eq:partialLossWeight}
+\end{equation}
+
+交叉熵损失函数 $L$ 对 $\vb_2$ 的偏导数为
+\begin{equation}
+  \frac{\partial L}{\partial \vb_2}=\frac{\partial\vh_3}{\partial\vb_2}\frac{\partial L}{\partial \vh_3}=\frac{\partial(\mw_2^\top\va_2+\vb_2)}{\partial\vb_2}\frac{\partial L}{\partial \vh_3}=\mi(\vyh-\vy)=\vyh-\vy
+\end{equation}
+
+交叉熵损失函数 $L$ 对 $\va_2$ 的偏导数为
+\begin{equation}
+  \frac{\partial L}{\partial \va_2}=\frac{\partial\vh_3}{\partial\va_2}\frac{\partial L}{\partial \vh_3}=\mw_2(\vyh-\vy)
+\end{equation}
+
+交叉熵损失函数 $L$ 对 $\vh_2$ 的偏导数为
+\begin{equation}
+  \frac{\partial L}{\partial \vh_2}=\frac{\partial\va_2}{\partial\vh_2}\frac{\partial L}{\partial \va_2}=\frac{\partial(\vh_2\odot\vm)}{\partial\vh_2}\frac{\partial L}{\partial \va_2}=\diag(\vm)\mw_2(\vyh-\vy)=\vm\odot[\mw_2(\vyh-\vy)]
+\end{equation}
+
+交叉熵损失函数 $L$ 对 $\va_1$ 的偏导数为
+\begin{equation}
+  \frac{\partial L}{\partial \va_1}=\frac{\partial\vh_2}{\partial\va_1}\frac{\partial L}{\partial \vh_2}
+  =\frac{\partial
+  \begin{bmatrix}
+    \va_1\\\vx\\
+  \end{bmatrix}}{\partial\va_1}\frac{\partial L}{\partial \vh_2}
+  =[\mi_{s\times s}~~\bm{0}_{s\times d}]
+\diag(\vm)\mw_2(\vyh-\vy)
+\end{equation}
+
+交叉熵损失函数 $L$ 对 $\vh_1$ 的偏导数为
+\begin{equation}
+  \frac{\partial L}{\partial \vh_1}=\frac{\partial\va_1}{\partial\vh_1}\frac{\partial L}{\partial \va_1}
+  =\frac{\partial~\mathrm{ReLU}(\vh_1)}{\partial\vh_1}\frac{\partial L}{\partial \va_1}
+  =\diag\left(\frac{\bm{1}+\sgn(\vh_1)}{2}\right)\frac{\partial L}{\partial \va_1}
+\end{equation}
+
+函数 $\vh_1$ 对 $\mw_1$ 的偏导数为
+\begin{equation}
+  \frac{\partial \vh_1^{(i)}}{\partial \mw_1^{(m,n)}}=\frac{\partial \Big[(\mw_1^\top)^{(i,:)}\vx+\vb_1^{(i)}\Big]}{\partial \mw_1^{(m,n)}}=\delta_{in}\vx^{(m)},\quad\forall~i,n=1,2,\dots,s,~m=1,2,\dots,d
+\end{equation}
+
+故交叉熵损失函数 $L$ 对 $\mw_1^{(m,n)}$ 的偏导数为
+\begin{equation}
+  \begin{aligned}
+    \frac{\partial L}{\partial \mw_1^{(m,n)}}
+    &=\sum_{i=1}^s\frac{\partial \vh_1^{(i)}}{\partial\mw_1^{(m,n)}}\frac{\partial L}{\partial \vh_1^{(i)}}\\
+    &=\sum_{i=1}^s\frac{\partial L}{\partial \vh_1^{(i)}}\delta_{in}\vx^{(m)}\\
+    &=\vx^{(m)}\frac{\partial L}{\partial \vh_1^{(n)}}
+  \end{aligned}
+\end{equation}
+
+所以, 交叉熵损失函数 $L$ 对 $\mw_1$ 的偏导数为
+\begin{equation}
+  \frac{\partial L}{\partial \mw_1}=\vx\left(\frac{\partial L}{\partial \vh_1}\right)^\top
+\end{equation}
+
+交叉熵损失函数 $L$ 对 $\vb_1$ 的偏导数为
+\begin{equation}
+  \frac{\partial L}{\partial \vb_1}=\frac{\partial\vh_1}{\partial\vb_1}\frac{\partial L}{\partial \vh_1}=\frac{\partial(\mw_1^\top\vx+\vb_1)}{\partial\vb_1}\frac{\partial L}{\partial \vh_1}=\mi\frac{\partial L}{\partial \vh_1}=\frac{\partial L}{\partial \vh_1}
+\end{equation}
+
+交叉熵损失函数 $L$ 对 $\vx$ 的偏导数为
+\begin{equation}
+  \begin{aligned}
+    \frac{\partial L}{\partial \vx}
+    &=\frac{\partial \vh_1}{\partial \vx}\frac{\partial L}{\partial \vh_1}+\frac{\partial \vh_2}{\partial \vx}\frac{\partial L}{\partial \vh_2}\\
+    &=\frac{\partial (\mw_1^\top\vx+\vb_1)}{\partial \vx}\frac{\partial L}{\partial \vh_1}+\frac{\partial \begin{bmatrix}
+      \va_1\\\vx\\
+    \end{bmatrix}}{\partial \vx}\frac{\partial L}{\partial \vh_2}\\
+    &=\mw_1\frac{\partial L}{\partial \vh_1}+[\bm{0}_{d\times s}~~\mi_{d\times d}]\frac{\partial L}{\partial \vh_2}\\
+  \end{aligned}
+\end{equation}
+
+1.2. Derive the back-propagation updates for convolutional neural networks: In this situation, the input $\vx$ is an image with size $C_{\mathrm{in}} \times H \times W$, where the three dimensions represent channel, height and width respectively. We define the following simple convolutional neural network:
+\begin{align}
+  \vu_1 &= \mathrm{Conv2d}(C_{\mathrm{in}}, C_{\mathrm{out}}, k)(\vx) \\
+  \vh_1 &= \mathrm{MaxPool2d}(N)(\vu_1) \\
+  \va_1 &= \mathrm{ReLU}(\vh_1) \\
+  \vu_2 &= \mathrm{Flatten}(\va_1) \\
+  \vh_2 &= \mw_2^\top\vu_2 + \vb_2\\
+  \hat{\vy} &= \mathrm{Softmax}(\vh_2)
+\end{align}
+where \href{https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html}{Conv2d} (There are learnable parameters $\mw_1, \vb_1$ in this function. See this \href{https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html}{link} for detailed definitions of the function arguments and this \href{https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md}{link} for visualization) and \href{https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html}{MaxPool2d} are convolutional function and pooling function defined in a PyTorch style, \href{https://pytorch.org/docs/stable/generated/torch.flatten.html}{Flatten} means reshaping the input vector into a one-dimensional vector, and the final loss function is the same with Eq.~(\ref{eq:crossEntropy}). What is the derivatives for the network parameters (i.e. convolutional and linear weights and biases)?
+
+\emph{Hint: Read the following reference material: \href{http://cogprints.org/5869/1/cnn_tutorial.pdf}{Notes on Convolutional Neural Networks}.}
+
+解: 首先确定各个变量的维数, 输入图片 $\vx\in\reals^{C_{\text{in}}\times H\times W}$, Conv2d 函数输出 $\vu_1\in\reals^{C_{\text{out}}\times H_{\text{out}}\times W_{\text{out}}}$, 其中
+\begin{equation}
+  H_{\text{out}}=H-k+1,\quad W_{\text{out}}=W-k+1
+\end{equation}
+
+MaxPool2d 函数输出 $\vh_1\in\reals^{C_{\text{out}}\times H_{\text{mp}}\times W_{\text{mp}}}$, 其中
+\begin{equation}
+  H_{\text{mp}}=\left\lfloor\frac{H_{\text{out}}}{N}\right\rfloor,\quad W_{\text{mp}}=\left\lfloor\frac{W_{\text{out}}}{N}\right\rfloor
+\end{equation}
+
+ReLU 函数输出 $\va_1\in\reals^{C_{\text{out}}\times H_{\text{mp}}\times W_{\text{mp}}}$, Flatten 函数输出 $\vu_2\in\reals^{d}$, 其中
+\begin{equation}
+  d=C_{\text{out}}+H_{\text{mp}}+W_{\text{mp}}
+\end{equation}
+
+设 $\mw_2\in\reals^{d\times s}$, 则 $\vb_2\in\reals^{s}$, $\vh_2\in\reals^{s}$, $\vyh\in\reals^{s}$.
+
+由 1.1 题可知, 交叉熵损失函数 $L$ 对 $\mw_2$ 的偏导数为
+\begin{equation}
+  \frac{\partial L}{\partial \mw_2}=\va_2(\vyh-\vy)^\top
+\end{equation}
+
+交叉熵损失函数 $L$ 对 $\vb_2$ 的偏导数为
+\begin{equation}
+  \frac{\partial L}{\partial \vb_2}=\vyh-\vy
+\end{equation}
+
+交叉熵损失函数 $L$ 对 $\vu_2$ 的偏导数为
+\begin{equation}
+  \frac{\partial L}{\partial \vu_2}=\mw_2(\vyh-\vy)
+\end{equation}
+
+函数 $\vu_2$ 对 $\va_1$ 的偏导数为 4 阶张量 $\ta\in\reals^{C_{\text{out}}\times H_{\text{mp}}\times W_{\text{mp}}\times d}$, 其元素为
+\begin{equation}
+  \ta^{(i,j,k,m)}
+  =\frac{\partial\vu_2^{(m)}}{\partial\va_1^{(i,j,k)}}
+  =\frac{\partial[\mathrm{Flatten}(\va_1)]^{(m)}}{\partial\va_1^{(i,j,k)}}
+  =\delta_{mn(i,j,k)}
+\end{equation}
+
+其中 $n(\cdot,\cdot,\cdot)$ 是三元函数,
+\begin{equation}
+  n(i,j,k)\triangleq(i-1)H_{\text{mp}}W_{\text{mp}}+(j-1)W_{\text{mp}}+k
+\end{equation}
+
+交叉熵损失函数 $L$ 对 $\va_1$ 的偏导数为
+\begin{equation}
+  \begin{aligned}
+    \frac{\partial L}{\partial\va_1^{(i,j,k)}}
+    &=\sum_{m=1}^d\frac{\partial\vu_2^{(m)}}{\partial\va_1^{(i,j,k)}}\frac{\partial L}{\partial\vu_2^{(m)}}\\
+    &=\sum_{m=1}^d\delta_{mn(i,j,k)}\mw_2^{(m,:)}(\vyh-\vy)\\
+    &=\mw_2^{(n(i,j,k),:)}(\vyh-\vy)\\
+  \end{aligned}
+\end{equation}
+
+函数 $\va_1$ 对 $\vh_1$ 的偏导数为 6 阶张量 $\th\in\reals^{C_{\text{out}}\times H_{\text{mp}}\times W_{\text{mp}}\times C_{\text{out}}\times H_{\text{mp}}\times W_{\text{mp}}}$, 其元素为
+\begin{equation}
+  \th^{(r,s,t,i,j,k)}
+  =\frac{\partial\va_1^{(i,j,k)}}{\partial\vh_1^{(r,s,t)}}
+  =\frac{\partial~\mathrm{ReLU}(\vh_1^{(i,j,k)})}{\partial\vh_1^{(r,s,t)}}
+  =\delta_{ir}\delta_{js}\delta_{kt}\frac{1+\sgn(\vh_1^{(r,s,t)})}{2}
+\end{equation}
+
+交叉熵损失函数 $L$ 对 $\vh_1$ 的偏导数为
+\begin{equation}
+  \begin{aligned}
+    \frac{\partial L}{\partial\vh_1^{(r,s,t)}}
+    &=\sum_{i=1}^{C_{\text{out}}}\sum_{j=1}^{H_{\text{mp}}}\sum_{k=1}^{W_{\text{mp}}}\frac{\partial\va_1^{(i,j,k)}}{\partial\vh_1^{(r,s,t)}}\frac{\partial L}{\partial\va_1^{(i,j,k)}}\\
+    &=\sum_{i=1}^{C_{\text{out}}}\sum_{j=1}^{H_{\text{mp}}}\sum_{k=1}^{W_{\text{mp}}}\delta_{ir}\delta_{js}\delta_{kt}\frac{1+\sgn(\vh_1^{(r,s,t)})}{2}\mw_2^{(n(i,j,k),:)}(\vyh-\vy)\\
+    &=\frac{1+\sgn(\vh_1^{(r,s,t)})}{2}\mw_2^{(n(r,s,t),:)}(\vyh-\vy)
+  \end{aligned}
+\end{equation}
+
+函数 $\vh_1$ 对 $\vu_1$ 的偏导数为 6 阶张量 $\tu\in\reals^{C_{\text{out}}\times H_{\text{out}}\times W_{\text{out}}\times C_{\text{out}}\times H_{\text{mp}}\times W_{\text{mp}}}$, 其元素为
+\begin{equation}
+  \begin{aligned}
+    \tu^{(p,q,l,r,s,t)}
+    &=\frac{\partial\vh_1^{(r,s,t)}}{\partial\vu_1^{(p,q,l)}}\\
+    &=\frac{\partial~\mathrm{MaxPool2d}(\vh_1^{(r,s,t)})}{\partial\vu_1^{(p,q,l)}}\\
+    &=\begin{cases}
+      \delta_{\vh_1^{(r,s,t)})\vu_1^{(p,q,l)}},&\text{if}~~p-1<\dfrac{r}{N}\ls p,~q-1<\dfrac{s}{N}\ls q,~l-1<\dfrac{t}{N}\ls l\\[1mm]
+      0,&\text{o.w.}
+    \end{cases}
+  \end{aligned}
+\end{equation}
+
+交叉熵损失函数 $L$ 对 $\vu_1$ 的偏导数为
+\begin{equation}
+  \begin{aligned}
+    \frac{\partial L}{\partial\vu_1^{(p,q,l)}}
+    &=\sum_{r=1}^{C_{\text{out}}}\sum_{s=1}^{H_{\text{mp}}}\sum_{t=1}^{W_{\text{mp}}}
+    \frac{\partial\vh_1^{(r,s,t)}}{\partial\vu_1^{(p,q,l)}}
+    \frac{\partial L}{\partial\vh_1^{(r,s,t)}}\\
+    &=\sum_{r=1}^{C_{\text{out}}}\sum_{s=1}^{H_{\text{mp}}}\sum_{t=1}^{W_{\text{mp}}}
+    \frac{\partial\vh_1^{(r,s,t)}}{\partial\vu_1^{(p,q,l)}}
+    \frac{1+\sgn(\vh_1^{(r,s,t)})}{2}\mw_2^{(n(r,s,t),:)}(\vyh-\vy)\\
+  \end{aligned}
+\end{equation}
+
+由函数 Conv2d 定义可知
+\begin{equation}
+  \vu_1^{(j,:,:)}=\vb_1^{(j,:,:)}+\sum_{k=1}^{C_{\text{in}}}\mw_1^{(j,k,:,:)}\star\vx^{(k,:,:)}
+\end{equation}
+
+其中, $\star$ 为二维互相关 (cross-correlation) 运算符号,
+\begin{equation}
+  \vb_1\in\reals^{C_{\text{out}}\times H_{\text{out}}\times W_{\text{out}}},
+  \quad
+  \mw_1\in\reals^{C_{\text{out}}\times C_{\text{in}}\times k\times k}
+\end{equation}
+
+交叉熵损失函数 $L$ 对 $\vb_1$ 的偏导数为
+\begin{equation}
+  \frac{\partial L}{\partial\vb_1}=\frac{\partial L}{\partial\vu_1}
+\end{equation}
+
+函数 $\vu_1$ 对 $\mw_1$ 的偏导数为 7 阶张量 $\tw\in\reals^{C_{\text{out}}\times C_{\text{in}}\times k\times k\times C_{\text{out}}\times H_{\text{out}}\times W_{\text{out}}}$, 难以具体表出, 根据参考文献 \cite{notecnn} 可知可以使用 MATLAB 内置函数直接计算交叉熵损失函数 $L$ 对 $\mw_1$ 的偏导数.
+
+交叉熵损失函数 $L$ 对 $\mw_1$ 的偏导数为
+\begin{equation}
+  \frac{\partial L}{\partial\mw_1^{(m,n,:,:)}}
+  =\mathrm{rot180}\left\{\mathrm{conv2}\left[\vx^{(n,:,:)},~\mathrm{rot180}\left(\frac{\partial L}{\partial\vu_1^{(m,:,:)}}\right),~\text{`valid'}\right]\right\}
+\end{equation}
+
+其中, rot180 和 conv2 均为 MATLAB 中的函数.
+
+\section*{Vanishing and Exploding Gradients}
+
+2. In this section we will investigate the vanishing/exploding gradient problem and see why ReLU and ResNet can mitigate this problem. The vanishing/exploding gradient problem often occurs during training very deep neural networks and could make the training process failed.
+
+Suppose the input $\vx$ and output $\hat{\vy}$ are both $d$-dimensional vectors, and the gradient of loss w.r.t. $\hat{\vy}$: $\frac{\partial L}{\partial \hat{\vy}}\in\mathbb R^d$ is known. Suppose the deep feed-forward neural network has $l$ layers (i.e., $l>100$), and all internal nodes are also $d$-dimensional. All weights are initialized with zero-mean Gaussian distribution and all biases are initialized to zero. We now analyze the gradients in the first optimization iteration.
+
+\paragraph{Effect of ReLU.} The neural network is defined by: 
+\begin{equation}
+  \begin{aligned}
+    \va_1&=\mathrm{Sigmoid}(\mw_1^\top\vx+\vb_1)\\
+    \va_2&=\mathrm{Sigmoid}(\mw_2^\top\va_1+\vb_2)\\
+    &~~\vdots\\
+    \hat{\vy}=\va_l&=\mathrm{Sigmoid}(\mw_l^\top\va_{l-1}+\vb_l)
+  \end{aligned}
+\end{equation}
+
+2.1. Find $\frac{\partial L}{\partial \mw_1}$.
+
+解: 对 $z\in\reals$, Sigmoid 函数定义为
+\begin{equation}
+  \mathrm{Sigmoid}(z)=\frac{1}{1+\exp(-z)}
+\end{equation}
+
+其对 $z$ 的偏导数为
+\begin{equation}
+  \begin{aligned}
+    \frac{\partial~\mathrm{Sigmoid}(z)}{\partial z}
+    &=\frac{-[-\exp(-z)]}{[1+\exp(z)]^2}\\
+    &=\frac{1}{1+\exp(-z)}\frac{\exp(-z)}{1+\exp(-z)}\\
+    &=\mathrm{Sigmoid}(z)[1-\mathrm{Sigmoid}(z)]
+  \end{aligned}
+  \label{eq:sigmoidPartial}
+\end{equation}
+
+对 $\vz\in\reals^d$, Sigmoid 函数可用逐项除法 $\oslash$ 符号表示为
+\begin{equation}
+  \mathrm{Sigmoid}(\vz)=\bm{1}\oslash[\bm{1}+\exp(-\vz)]
+\end{equation}
+
+则由式 (\ref{eq:sigmoidPartial}) 可知 $\mathrm{Sigmoid}(\vz)$ 对 $\vz$ 的偏导数为
+\begin{equation}
+  \begin{aligned}
+    \frac{\partial~\mathrm{Sigmoid}(\vz)}{\partial\vz}
+    &=\diag\Big\{\mathrm{Sigmoid}(\vz)\odot\big[\bm{1}-\mathrm{Sigmoid}(\vz)\big]\Big\}
+  \end{aligned}
+  \label{eq:vectorPartialSigmoid}
+\end{equation}
+
+记 $\va_0\triangleq\vx$, 令
+\begin{equation}
+  \vh_i\triangleq\mw_i^\top\va_{i-1}+\vb_i,\quad\forall~i=1,2,\dots,l
+\end{equation}
+
+则
+\begin{equation}
+  \frac{\partial\vh_i}{\partial\va_{i-1}}=\mw_i,\quad\forall~i=1,2,\dots,l
+\end{equation}
+
+又由式 (\ref{eq:vectorPartialSigmoid}) 可知
+\begin{equation}
+  \frac{\partial\va_i}{\partial\vh_i}=\frac{\partial~\mathrm{Sigmoid}(\vh_i)}{\partial\vh_i}=\diag[\va_i\odot(\bm{1}-\va_i)],\quad\forall~i=1,2,\dots,l
+\end{equation}
+
+则由链式法则及式 (\ref{eq:partialLossWeight}) 可得
+\begin{equation}
+  \begin{aligned}
+    \frac{\partial L}{\partial\mw_1}
+    &=\frac{\partial\va_1}{\partial\mw_1}\frac{\partial\va_{2}}{\partial\va_{1}}\cdots\frac{\partial\va_{l-1}}{\partial\va_{l-2}}\frac{\partial\vyh}{\partial\va_{l-1}}\frac{\partial L}{\partial\vyh}\\
+    &=\left(\frac{\partial\vh_1}{\partial\mw_1}
+    \frac{\partial\va_{1}}{\partial\vh_{1}}\right)
+    \left(\frac{\partial\vh_2}{\partial\va_1}
+    \frac{\partial\va_{2}}{\partial\vh_{2}}\right)
+    \cdots
+    \left(\frac{\partial\vh_{l-1}}{\partial\va_{l-2}}
+    \frac{\partial\va_{l-1}}{\partial\vh_{l-1}}\right)
+    \left(\frac{\partial\vh_{l}}{\partial\va_{l-1}}
+    \frac{\partial\va_l}{\partial\vh_{l}}\right)
+    \frac{\partial L}{\partial\vyh}\\
+    &=\frac{\partial\vh_1}{\partial\mw_1}
+    \frac{\partial\va_{1}}{\partial\vh_{1}}
+    \left(\prod_{i=2}^l\frac{\partial\vh_i}{\partial\va_{i-1}}
+    \frac{\partial\va_{i}}{\partial\vh_{i}}\right)
+    \frac{\partial L}{\partial\vyh}\\
+    &=\frac{\partial\vh_1}{\partial\mw_1}
+    \diag\big[\va_1\odot(\bm{1}-\va_1)\big]
+    \left(\prod_{i=2}^l\mw_i\diag\big[\va_i\odot(\bm{1}-\va_i)\big]\right)
+    \frac{\partial L}{\partial\vyh}\\
+    &=\frac{\partial\vh_1}{\partial\mw_1}
+    \left(\prod_{i=2}^l\mw_i\right)\left(\prod_{j=1}^l\diag\big[\va_j\odot(\bm{1}-\va_j)\big]\right)
+    \frac{\partial L}{\partial\vyh}\\
+    &=\vx\left[\left(\prod_{i=2}^l\mw_i\right)\left(\prod_{j=1}^l\diag\big[\va_j\odot(\bm{1}-\va_j)\big]\right)
+    \frac{\partial L}{\partial\vyh}\right]^\top\\
+  \end{aligned}
+\end{equation}
+
+2.2. Suppose $z\in\mathbb R$ is a scalar, find the maximum of sigmoid function's derivative: $g(z)=\mathrm{Sigmoid}'(z)$.
+
+解: 由式 (\ref{eq:sigmoidPartial}) 可知
+\begin{equation}
+  g(z)=\mathrm{Sigmoid}'(z)=\mathrm{Sigmoid}(z)[1-\mathrm{Sigmoid}(z)]
+\end{equation}
+
+根据基本不等式可得
+\begin{equation}
+  g(z)=\mathrm{Sigmoid}(z)[1-\mathrm{Sigmoid}(z)]\ls\frac{\big[\mathrm{Sigmoid}(z)+1-\mathrm{Sigmoid}(z)\big]^2}{4}=\frac{1}{4}
+\end{equation}
+
+等号成立当且仅当
+\begin{equation}
+  \mathrm{Sigmoid}(z)=1-\mathrm{Sigmoid}(z)
+\end{equation}
+
+即
+\begin{equation}
+  \mathrm{Sigmoid}(z)=\frac{1}{2}
+\end{equation}
+
+即
+\begin{equation}
+  z=0
+\end{equation}
+
+故当 $z=0$ 时, Sigmoid 函数的梯度 $g(z)$ 取到最大值
+\begin{equation}
+  \max_{z\in\reals}g(z)=g(0)=\frac{1}{4}
+\end{equation}
+
+2.3. Since many sigmoid functions' derivatives are multiplied together in $\frac{\partial L}{\partial \mw_1}$, the values in $\frac{\partial L}{\partial \mw_1}$ will tend to vanish to zero. Is there any possibility that we can initialize weight matrices carefully to recover the values into a good range for float32 (e.g., -0.01 to 1000)? (\emph{Hint: Since the sigmoid function saturates in both sides, in order to keep the gradient scale ``reasonable'', one needs to make sure the values before sigmoid function lie in non-saturation region.})
+
+解: 由上题可知 $\mathrm{Sigmoid}(z)$ 函数的最大梯度位于 $z=0$ 处, 且 $\mathrm{Sigmoid}(0)=1/2$, 即要求
+\begin{equation}
+  \begin{aligned}
+    \mw_1^\top\vx+\vb_1&=\bm{0}\\
+    \mw_i^\top\frac{\bm{1}}{2}+\vb_i&=\bm{0},\quad\forall~i=2,3,\dots,l\\
+  \end{aligned}
+\end{equation}
+
+初始化时偏置 $\vb_i=\bm{0}$, $\forall~i=1,2,\dots,l$, 则初始化权重矩阵需满足
+\begin{equation}
+  \begin{aligned}
+    \mw_1^\top\vx&=\bm{0}\\
+    \mw_i^\top\bm{1}&=\bm{0},\quad\forall~i=2,3,\dots,l\\
+  \end{aligned}
+\end{equation}
+
+此时获得的 Sigmoid 函数梯度连乘是最大的, 但由于
+\begin{equation}
+  \max_{z\in\reals} g(z)=\frac{1}{4}
+\end{equation}
+
+又 $l>100$, $\forall~z_j\in\reals,~j=1,2,\dots,l$ 有
+\begin{equation}
+  \prod_{j=1}^l g(z_j)<\prod_{j=1}^l \max_{z_j\in\reals}g(z_j)=2^{-2l}<2^{-200}\ll2^{-126}
+\end{equation}
+
+故当层数很多时, 在梯度都取最大值这种最好的情况下也几乎不可能把梯度值恢复到对 float32 精度友好的数值范围 (e.g., -0.01 to 1000) 内, 甚至会远远超出 float32 精度的表示范围 ($2^{-126}\sim2^{127}$).
+
+2.4. If our computer supports efficient arbitrary precision floating point calculation, do we need to care about vanishing gradient problem anymore?
+
+解: 需要考虑, 因为即便计算精确, 梯度 $\frac{\partial L}{\partial \mw_1}$ 过小也会使得权重矩阵的更新过程
+\begin{equation}
+  \mw_1\leftarrow\mw_1-\eta\frac{\partial L}{\partial \mw_1}
+\end{equation} 
+极为缓慢, 最终导致整个神经网络长时间无法收敛.
+
+2.5. Can we alleviate the vanishing problem by replacing the activation function from sigmoid to ReLU? Why?
+
+解: 可以缓解一部分. 此时
+\begin{equation}
+  \frac{\partial\va_i}{\partial\vh_i}=\frac{\partial~\mathrm{ReLU}(\vh_i)}{\partial\vh_i}=\diag\left(\frac{\bm{1}+\sgn(\va_j)}{2}\right),\quad\forall~i=1,2,\dots,l
+\end{equation}
+
+则
+\begin{equation}
+  \begin{aligned}
+    \frac{\partial L}{\partial\mw_1}
+    &=\frac{\partial\vh_1}{\partial\mw_1}
+    \frac{\partial\va_{1}}{\partial\vh_{1}}
+    \left(\prod_{i=2}^l\frac{\partial\vh_i}{\partial\va_{i-1}}
+    \frac{\partial\va_{i}}{\partial\vh_{i}}\right)
+    \frac{\partial L}{\partial\vyh}\\
+    &=\vx\left[
+      \left(\prod_{i=2}^l\mw_i\right)\left(\prod_{j=1}^l\diag\left(\frac{\bm{1}+\sgn(\va_j)}{2}\right)\right)
+      \frac{\partial L}{\partial\vyh}
+    \right]^\top\\
+  \end{aligned}
+\end{equation}
+
+所以, ReLU 函数梯度连乘的部分 $$\prod_{j=1}^l\diag\left(\frac{\bm{1}+\sgn(\va_j)}{2}\right)$$ 不会消失, 但若 $\det(\mw_i)$ 过小, 则权重矩阵连乘的部分 $$\prod_{i=2}^l\mw_i$$ 会消失, 这也会导致梯度的消失. 因此, 把 Sigmoid 函数换成 ReLU 函数可以缓解一部分梯度消失的问题, 但不能完全避免这个问题.
+
+\paragraph{Effect of ResNet.} The neural network now has skip connections: 
+\begin{equation}
+  \begin{aligned}
+    \va_1&=\mathrm{Sigmoid}(\mw_1^\top\vx+\vb_1)+\vx\\
+    \va_2&=\mathrm{Sigmoid}(\mw_2^\top\va_1+\vb_2)+\va_1\\
+    &~~\vdots\\
+    \hat{\vy}=\va_l&=\mathrm{Sigmoid}(\mw_l^\top\va_{l-1}+\vb_l)+\va_{l-1}\\
+  \end{aligned}
+\end{equation}
+
+2.7. Find $\frac{\partial L}{\partial \mw_1}$ and explain why the gradients can not easily vanish.
+
+解: 与 2.1 题类似, 由链式法则及式 (\ref{eq:partialLossWeight}) 可得
+\begin{equation}
+  \begin{aligned}
+    \frac{\partial L}{\partial\mw_1}
+    &=\frac{\partial\va_1}{\partial\mw_1}\frac{\partial\va_{2}}{\partial\va_{1}}\cdots\frac{\partial\va_{l-1}}{\partial\va_{l-2}}\frac{\partial\vyh}{\partial\va_{l-1}}\frac{\partial L}{\partial\vyh}\\
+    &=\left(\frac{\partial\vh_1}{\partial\mw_1}
+    \frac{\partial\va_{1}}{\partial\vh_{1}}\right)
+    \left(\frac{\partial\vh_2}{\partial\va_1}
+    \frac{\partial\va_{2}}{\partial\vh_{2}}+\mi\right)
+    \cdots
+    \left(\frac{\partial\vh_{l-1}}{\partial\va_{l-2}}
+    \frac{\partial\va_{l-1}}{\partial\vh_{l-1}}+\mi\right)
+    \left(\frac{\partial\vh_{l}}{\partial\va_{l-1}}
+    \frac{\partial\va_l}{\partial\vh_{l}}+\mi\right)
+    \frac{\partial L}{\partial\vyh}\\
+    &=\frac{\partial\vh_1}{\partial\mw_1}
+    \frac{\partial\va_{1}}{\partial\vh_{1}}
+    \left[
+      \prod_{i=2}^l
+      \left(
+        \frac{\partial\vh_i}{\partial\va_{i-1}}
+        \frac{\partial\va_{i}}{\partial\vh_{i}}+\mi
+      \right)
+    \right]
+    \frac{\partial L}{\partial\vyh}\\
+    &=\frac{\partial\vh_1}{\partial\mw_1}
+    \diag\big[\va_1\odot(\bm{1}-\va_1)\big]
+    \left[
+      \prod_{i=2}^l\Big(\mw_i\diag\big[\va_i\odot(\bm{1}-\va_i)\big]+\mi\Big)
+    \right]
+    \frac{\partial L}{\partial\vyh}\\
+    &=\vx\left\{
+      \diag\big[\va_1\odot(\bm{1}-\va_1)\big]
+      \left[
+        \prod_{i=2}^l\Big(\mw_i\diag\big[\va_i\odot(\bm{1}-\va_i)\big]+\mi\Big)
+      \right]
+      \frac{\partial L}{\partial\vyh}
+    \right\}^\top\\
+  \end{aligned}
+\end{equation}
+
+所以, 连乘部分 $$\prod_{i=2}^l\Big(\mw_i\diag\big[\va_i\odot(\bm{1}-\va_i)\big]+\mi\Big)$$ 中的每一项都加上了一个单位矩阵, 则此部分轻易不会消失, 因此 ResNet 可以有效防止梯度消失的问题.
+
+\section*{Programming: Image Classification with CIFAR-10}
+
+Please install PyTorch and run the \href{https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html}{CIFAR-10 tutorial}.
+If you want to use TensorFlow or other deep learning frameworks, please find corresponding CIFAR-10 tutorial for that framework and run it.
+
+If you successfully run the tutorial, write ``Success'' in the report and otherwise please write ``Failed''.
+For this assignment report, only this single word is required, no details/accuracies/codes are needed. 
+The assignment intends to get you familiar with the deep learning library.
+If you have already trained some deep classifiers using any deep learning library before, you can safely ignore the tutorial and directly write ``Success'' in the report.
+
+解: Success.
+
+% Reference
+\begin{thebibliography}{1}
+
+\bibitem{np}
+Dimitri P. Bertsekas. Nonlinear Programming: 3rd Edition[M]. Athena Scientific, 2016. ISBN: 978-1-886529-05-2, \url{http://www.athenasc.com/nonlinbook.html}.
+
+\bibitem{notecnn}
+Bouvrie, Jake. Notes on Convolutional Neural Networks. CogPrints.org, 2006. \url{http://cogprints.org/5869/1/cnn_tutorial.pdf}.
+
+\end{thebibliography}
+
+\end{document}
