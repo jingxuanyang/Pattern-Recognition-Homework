@@ -15,6 +15,8 @@ Our main textbook is
 }
 ```
 
+All homework solutions are combined in the `prhw.pdf`.
+
 ## Homework 1 Bayesian Methods
 
 The directory of this homework is as follows.
