@@ -15,7 +15,7 @@ Our main textbook is
 }
 ```
 
-All homework solutions are combined in the `prhw.pdf`.
+All homework solutions are combined in the [prhw.pdf](/prhw.pdf).
 
 ## Homework 1 Bayesian Methods
 
