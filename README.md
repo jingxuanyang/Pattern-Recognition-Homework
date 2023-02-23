@@ -1,8 +1,8 @@
-# Pattern Recognition
+# Pattern Recognition Homeworks
 
 ## Introduction
 
-This is about homework of Pattern Recognition. 
+This repo consists of homeworks of Pattern Recognition. 
 
 Our main textbook is 
 
